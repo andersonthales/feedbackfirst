@@ -4,7 +4,7 @@ Impede que um usuário abra um **novo chamado** enquanto tiver **pesquisas de sa
 
 | | |
 |---|---|
-| **Versão** | 1.0.0 |
+| **Versão** | 1.0.1 |
 | **GLPI** | 10.0.x |
 | **PHP** | 8.0 ou superior |
 | **Opcional** | Plugin [Satisfaction](https://github.com/pluginsGLPI/satisfaction) |
@@ -35,7 +35,7 @@ Há pesquisa de satisfação pendente, dentro do prazo?
 Uma linha em `glpi_ticketsatisfactions` que:
 
 - ainda não foi respondida (`satisfaction` e `date_answered` vazios);
-- pertence a um chamado não excluído;
+- pertence a um chamado não excluído **em que o usuário é requerente**;
 - **ainda está no prazo**: `date_begin` + *duração da pesquisa* da entidade (`inquest_duration`). Se a entidade não define o prazo, vale o da entidade raiz; sem prazo nenhum, a pesquisa nunca expira.
 
 Com o plugin **Satisfaction** ativo, também são consideradas as pesquisas dele que ainda não têm resposta.
@@ -67,11 +67,11 @@ Em **Configurar → Plugins**, clique no nome **Avalie Antes** (requer o direito
 
 Com a configuração padrão, **todos os perfis** são bloqueados, inclusive técnicos e Super-Admin. Um técnico que tenha pesquisas pendentes não consegue abrir chamados nem em nome de outras pessoas. Na maioria dos casos, deixe marcado **só o perfil Self-Service**.
 
+Perfis desmarcados nunca são bloqueados. Se todos estiverem marcados, a regra vale também para perfis criados depois.
+
 ## Limitações conhecidas
 
-- O bloqueio considera **quem está logado**, e a pesquisa é procurada pelo campo *Quem abriu o chamado* (`users_id_recipient`). Quando um técnico abre o chamado em nome do usuário, a pendência fica com o técnico, não com o requerente.
-- Na tela de perfis, **desmarcar todos** equivale a **bloquear todos**.
-- A consulta ao plugin Satisfaction usa colunas que não existem na tabela dele (`tickets_id`, `users_id`). Ela falha e é ignorada, deixando um erro de SQL no log.
+- O bloqueio vale para **quem está logado**, considerando as pesquisas dos chamados em que essa pessoa é **requerente**. Um técnico que abre chamado em nome de alguém é bloqueado pelas pesquisas *dele*, não pelas do requerente.
 - Compatível somente com **GLPI 10**.
 
 ## Desinstalação

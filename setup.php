@@ -18,9 +18,9 @@
  * -------------------------------------------------------------------------
  */
 
-define('PLUGIN_FEEDBACKFIRST_VERSION', '1.0.0');
+define('PLUGIN_FEEDBACKFIRST_VERSION', '1.0.1');
 define('PLUGIN_FEEDBACKFIRST_MIN_GLPI', '10.0');
-define('PLUGIN_FEEDBACKFIRST_MAX_GLPI', '11.0');
+define('PLUGIN_FEEDBACKFIRST_MAX_GLPI', '10.0.99');
 
 $_feedbackfirst_inc = dirname(__FILE__) . '/inc/blocker.class.php';
 if (file_exists($_feedbackfirst_inc)) {

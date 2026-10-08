@@ -67,7 +67,10 @@ class PluginFeedbackfirstBlocker {
          INNER JOIN glpi_tickets t ON t.id = ts.tickets_id
          INNER JOIN glpi_entities e ON e.id = t.entities_id
          LEFT JOIN glpi_entities eroot ON eroot.id = 0
-         WHERE t.users_id_recipient = {$uid}
+         WHERE EXISTS (
+               SELECT 1 FROM glpi_tickets_users tu
+               WHERE tu.tickets_id = t.id AND tu.type = 1 AND tu.users_id = {$uid}
+           )
            AND t.is_deleted = 0
            AND ts.satisfaction IS NULL
            AND ts.date_answered IS NULL
@@ -105,13 +108,16 @@ class PluginFeedbackfirstBlocker {
          INNER JOIN glpi_tickets t ON t.id = ts.tickets_id
          INNER JOIN glpi_entities e ON e.id = t.entities_id
          LEFT JOIN glpi_entities eroot ON eroot.id = 0
-         WHERE t.users_id_recipient = {$uid}
+         WHERE EXISTS (
+               SELECT 1 FROM glpi_tickets_users tu
+               WHERE tu.tickets_id = t.id AND tu.type = 1 AND tu.users_id = {$uid}
+           )
            AND t.is_deleted = 0
            AND ts.satisfaction IS NULL
            AND ts.date_answered IS NULL
            AND NOT EXISTS (
                SELECT 1 FROM glpi_plugin_satisfaction_surveyanswers ans
-               WHERE ans.tickets_id = t.id AND ans.users_id = {$uid}
+               WHERE ans.ticketsatisfactions_id = ts.id
            )
          ORDER BY t.id DESC
       ";
@@ -135,10 +141,13 @@ class PluginFeedbackfirstBlocker {
    }
 
    private static function isCurrentProfileBlocked(): bool {
-      $config      = self::getConfig();
-      $blocked_ids = json_decode($config['block_profiles'] ?? '[]', true);
-      if (empty($blocked_ids) || !is_array($blocked_ids)) return true;
-      return in_array((int) ($_SESSION['glpiactiveprofile']['id'] ?? 0), $blocked_ids, true);
+      // NULL = todos os perfis (padrão de instalação); lista JSON = só os
+      // perfis listados, e lista vazia = nenhum perfil bloqueado.
+      $config = self::getConfig();
+      if ($config['block_profiles'] === null || $config['block_profiles'] === '') return true;
+      $blocked_ids = json_decode($config['block_profiles'], true);
+      if (!is_array($blocked_ids)) return true;
+      return in_array((int) ($_SESSION['glpiactiveprofile']['id'] ?? 0), array_map('intval', $blocked_ids), true);
    }
 
    public static function getConfig(): array {
@@ -164,13 +173,24 @@ class PluginFeedbackfirstBlocker {
             'block_on_native_survey' => (int) ($data['block_on_native_survey'] ?? 0),
             'block_on_plugin_survey' => (int) ($data['block_on_plugin_survey'] ?? 0),
             'show_pending_list'      => (int) ($data['show_pending_list'] ?? 0),
-            'block_profiles'         => !empty($data['block_profiles'])
-               ? json_encode(array_map('intval', (array) $data['block_profiles']))
-               : null,
+            'block_profiles'         => self::normalizeBlockedProfiles($data['block_profiles'] ?? []),
             'date_mod'               => date('Y-m-d H:i:s'),
          ],
          ['id' => 1]
       );
+   }
+
+   /**
+    * Todos os perfis marcados → NULL (inclui perfis criados depois);
+    * nenhum marcado → '[]' (ninguém é bloqueado); senão, a lista marcada.
+    */
+   private static function normalizeBlockedProfiles($selected): ?string {
+      $selected = array_values(array_unique(array_map('intval', (array) $selected)));
+      $all      = array_map('intval', array_keys(getAllDataFromTable('glpi_profiles')));
+      if (!empty($all) && empty(array_diff($all, $selected))) {
+         return null;
+      }
+      return json_encode($selected);
    }
 
    private static function buildBlockMessage(array $pending, bool $show_list): string {

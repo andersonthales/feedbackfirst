@@ -60,14 +60,15 @@ class PluginFeedbackfirstConfig extends CommonGLPI {
       // Perfis
       echo '<div class="feedbackfirst-config-section feedbackfirst-config-section--full">';
       echo '<h3>PERFIS BLOQUEADOS</h3>';
-      echo '<p class="feedbackfirst-config-hint">Selecione os perfis que sofrerão o bloqueio. Deixe todos desmarcados para bloquear todos os perfis.</p>';
+      echo '<p class="feedbackfirst-config-hint">Selecione os perfis que sofrerão o bloqueio. Perfis desmarcados nunca são bloqueados. Recomendado: apenas o perfil Self-Service.</p>';
 
       $profiles    = getAllDataFromTable('glpi_profiles');
-      $blocked_ids = json_decode($config['block_profiles'] ?? '[]', true) ?? [];
+      $all_blocked = ($config['block_profiles'] ?? null) === null;
+      $blocked_ids = $all_blocked ? [] : array_map('intval', json_decode($config['block_profiles'], true) ?? []);
 
       echo '<div class="feedbackfirst-profiles-grid">';
       foreach ($profiles as $profile) {
-         $checked = empty($blocked_ids) || in_array((int) $profile['id'], $blocked_ids, true);
+         $checked = $all_blocked || in_array((int) $profile['id'], $blocked_ids, true);
          echo '<label class="feedbackfirst-profile-check">';
          echo '<input type="checkbox" name="block_profiles[]" value="' . (int)$profile['id'] . '"' . ($checked ? ' checked' : '') . '>';
          echo htmlspecialchars($profile['name']);
